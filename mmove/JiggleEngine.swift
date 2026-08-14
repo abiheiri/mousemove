@@ -1,4 +1,3 @@
-import AppKit
 import Combine
 import CoreGraphics
 import Foundation
@@ -76,9 +75,12 @@ final class JiggleEngine {
         let target = CGPoint(x: original.x + dx, y: original.y + dy)
         // Keep the target at least 2 px inside the display bounds so the warp
         // can't fail/clamp at screen edges or trigger a hot corner — either
-        // would break the warp-back guard and leave permanent drift.
-        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(original, $0.frame, false) }) else { return }
-        let bounds = screen.frame.insetBy(dx: 2, dy: 2)
+        // would break the warp-back guard and leave permanent drift. Stay in
+        // Quartz display coordinates to match CGEvent.location.
+        var display = CGDirectDisplayID()
+        var count: UInt32 = 0
+        guard CGGetDisplaysWithPoint(original, 1, &display, &count) == .success, count > 0 else { return }
+        let bounds = CGDisplayBounds(display).insetBy(dx: 2, dy: 2)
         let clamped = CGPoint(x: min(max(target.x, bounds.minX), bounds.maxX),
                               y: min(max(target.y, bounds.minY), bounds.maxY))
         CGWarpMouseCursorPosition(clamped)
