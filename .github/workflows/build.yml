@@ -1,0 +1,89 @@
+name: Build
+
+on:
+  push:
+    tags: ['v*']
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16.0'
+
+      - name: Stamp version from tag
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          VERSION="${TAG#v}"
+          xcrun agvtool new-marketing-version "$VERSION"
+
+      - name: Build
+        run: |
+          xcodebuild -project mmove.xcodeproj \
+            -scheme mmove \
+            -configuration Release \
+            -destination 'platform=macOS,arch=arm64' \
+            -derivedDataPath .build/DerivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            build
+
+      - name: Test
+        run: |
+          xcodebuild -project mmove.xcodeproj \
+            -scheme mmoveTests \
+            -destination 'platform=macOS,arch=arm64' \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            test
+
+      - name: Read version
+        id: version
+        run: |
+          V=$(xcodebuild -project mmove.xcodeproj -showBuildSettings -json 2>/dev/null \
+            | python3 -c "import sys,json; print(json.load(sys.stdin)[0]['buildSettings']['MARKETING_VERSION'])")
+          echo "version=$V" >> $GITHUB_OUTPUT
+          echo "version=$V"
+
+      - name: Package DMG
+        if: startsWith(github.ref, 'refs/tags/')
+        run: ./scripts/create-dmg.sh "${{ steps.version.outputs.version }}"
+
+      - name: Upload artifact
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/upload-artifact@v4
+        with:
+          name: mmove-${{ steps.version.outputs.version }}-macOS-arm64.dmg
+          path: release/mmove-${{ steps.version.outputs.version }}-macOS-arm64.dmg
+          retention-days: 30
+
+      - name: Create or update release
+        if: startsWith(github.ref, 'refs/tags/')
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          DMG="release/mmove-${{ steps.version.outputs.version }}-macOS-arm64.dmg"
+          NOTES_FILE="$(mktemp)"
+          if ./scripts/extract-changelog.sh "${{ steps.version.outputs.version }}" > "$NOTES_FILE"; then
+            echo "Using CHANGELOG.md section for ${{ steps.version.outputs.version }}"
+          else
+            echo "Release $TAG" > "$NOTES_FILE"
+          fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" "$DMG" --clobber
+            gh release edit "$TAG" --notes-file "$NOTES_FILE"
+          else
+            gh release create "$TAG" \
+              --title "mmove $TAG" \
+              --notes-file "$NOTES_FILE" \
+              "$DMG"
+          fi
