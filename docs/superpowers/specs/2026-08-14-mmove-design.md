@@ -78,11 +78,11 @@ Publishes changes so the engine and menu react immediately.
 ### `MenuView.swift`
 Content of the `MenuBarExtra`:
 
-- Status line: "Active" / "Paused"
+- Status line: "mmove is on" / "mmove is off"
 - Toggle: Pause / Resume
-- Settings submenu: "Move every…" with the five presets, checkmark on the
-  current one
-- Separator, then Quit (`NSApp.terminate`)
+- "Settings" submenu with the five presets ("Every N seconds/minutes"),
+  checkmark on the current one
+- Separator, then Quit (`NSApplication.shared.terminate`)
 
 ### `mmoveTests/`
 Unit tests for the pure decision logic of `JiggleEngine` (jiggle vs. skip given
