@@ -54,6 +54,15 @@ final class JiggleEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testDisabledEngineSchedulesNothing() {
+        defaults.set(false, forKey: "isEnabled")
+        let store = SettingsStore(defaults: defaults)
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertEqual(engine.currentInterval, 0)
+    }
+
+    @MainActor
     func testStopClearsInterval() {
         let store = SettingsStore(defaults: defaults)
         let engine = JiggleEngine(settings: store)
