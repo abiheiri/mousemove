@@ -51,7 +51,8 @@ final class JiggleEngine {
         let interval = TimeInterval(settings.frequencySeconds)
         currentInterval = interval
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
-            self?.tick()
+            // The closure is nonisolated; hop to the main actor for tick().
+            Task { @MainActor in self?.tick() }
         }
         // Let macOS coalesce wakes; exact timing doesn't matter here.
         timer.tolerance = interval * 0.1
