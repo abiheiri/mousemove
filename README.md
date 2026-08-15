@@ -35,3 +35,7 @@ xcodebuild test -project mmove.xcodeproj -scheme mmoveTests -destination 'platfo
 
 Push a `v*` tag. GitHub Actions builds the app, packages a DMG, and creates a
 GitHub release with notes from `CHANGELOG.md`.
+
+## Author
+
+Al Biheiri — al@forgottheaddress.com
