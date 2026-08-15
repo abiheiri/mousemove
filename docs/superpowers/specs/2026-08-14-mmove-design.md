@@ -144,7 +144,9 @@ CHANGELOG.md
 
 - Triggers: push of `v*` tags, PRs to `main`.
 - Runner `macos-15`, Xcode 16 via `maxim-lobanov/setup-xcode`.
-- On tags: stamp `MARKETING_VERSION` from the tag via `agvtool`.
+- On tags: version comes from the tag; the build stamps `MARKETING_VERSION`
+  via an `xcodebuild` build-setting override (`agvtool` is a no-op with
+  generated Info.plists).
 - Build: `xcodebuild -project mmove.xcodeproj -scheme mmove -configuration
   Release -destination 'platform=macOS,arch=arm64'`, unsigned
   (`CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO`).

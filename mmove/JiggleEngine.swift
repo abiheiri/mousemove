@@ -50,9 +50,13 @@ final class JiggleEngine {
         }
         let interval = TimeInterval(settings.frequencySeconds)
         currentInterval = interval
-        timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.tick() }
+        let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
+            self?.tick()
         }
+        // Let macOS coalesce wakes; exact timing doesn't matter here.
+        timer.tolerance = interval * 0.1
+        RunLoop.main.add(timer, forMode: .default)
+        self.timer = timer
     }
 
     private func tick() {
