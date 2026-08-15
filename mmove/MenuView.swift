@@ -1,9 +1,14 @@
 import SwiftUI
 
 /// Content of the menu bar extra: status, pause/resume, frequency
-/// settings submenu, and quit.
+/// settings submenu, version, and quit.
 struct MenuView: View {
     @ObservedObject var settings: SettingsStore
+
+    /// The running app's marketing version, e.g. "1.0.0".
+    static var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+    }
 
     var body: some View {
         Text(settings.isEnabled ? "mmove is on" : "mmove is off")
@@ -25,6 +30,10 @@ struct MenuView: View {
                 }
             }
         }
+
+        Divider()
+
+        Text("mmove \(Self.appVersion)")
 
         Divider()
 
