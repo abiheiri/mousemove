@@ -10,6 +10,8 @@ want the machine to stay active without touching power settings.
 - Net cursor movement is zero — it always returns to where it was.
 - No special permissions required.
 
+![mmove menu](docs/screenshot.png)
+
 ## Usage
 
 Click the mouse icon in the menu bar:
