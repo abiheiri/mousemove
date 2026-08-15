@@ -1,20 +1,21 @@
 # mmove
 
-A tiny macOS menu bar app that nudges the cursor 1–2 pixels (and back) every
-so often, so your Mac — and presence-aware chat apps like Slack — don't think
-you've gone idle.
+A lightweight macOS menu bar utility that keeps your Mac from going idle by
+periodically nudging the cursor a pixel or two — just enough to reset the
+system idle timer. Useful during presentations, long reads, or any time you
+want the machine to stay active without touching power settings.
 
-- Lives only in the menu bar (mouse icon); no Dock icon, no windows.
-- Never moves the cursor while you're typing or using the mouse.
+- Lives only in the menu bar; no Dock icon, no windows.
+- Never interferes while you're typing or using the mouse.
 - Net cursor movement is zero — it always returns to where it was.
-- No Accessibility or other permissions required.
+- No special permissions required.
 
 ## Usage
 
 Click the mouse icon in the menu bar:
 
-- **Pause / Resume** — toggle jiggling.
-- **Settings** — how often to move: every 15s, 30s, 60s (default), 2m, or 5m.
+- **Pause / Resume** — toggle the activity timer.
+- **Settings** — how often to nudge: every 15s, 30s, 60s (default), 2m, or 5m.
 - **Quit mmove**.
 
 ## Build
