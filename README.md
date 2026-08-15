@@ -31,7 +31,3 @@ Run tests:
 ```bash
 xcodebuild test -project mmove.xcodeproj -scheme mmoveTests -destination 'platform=macOS'
 ```
-
-## Author
-
-Al Biheiri — al@forgottheaddress.com
