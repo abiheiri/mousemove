@@ -14,6 +14,16 @@ APP="${2:-$PROJECT_DIR/.build/DerivedData/Build/Products/Release/$PROJECT.app}"
 DMG_NAME="${PROJECT}-${VERSION}-macOS-arm64"
 STAGING="$PROJECT_DIR/dmg-build"
 RELEASE="$PROJECT_DIR/release"
+MOUNT="/Volumes/$PROJECT"
+TEMP="$RELEASE/${DMG_NAME}-temp.dmg"
+FINAL="$RELEASE/${DMG_NAME}.dmg"
+
+cleanup() {
+  hdiutil detach "$MOUNT" -quiet 2>/dev/null || true
+  rm -f "$TEMP"
+  rm -rf "$STAGING"
+}
+trap cleanup EXIT
 
 rm -rf "$STAGING" "$RELEASE"
 mkdir -p "$STAGING" "$RELEASE"
@@ -23,10 +33,8 @@ cp -R "$APP" "$STAGING/"
 ln -s /Applications "$STAGING/Applications"
 
 echo "💿 Creating DMG…"
-TEMP="$RELEASE/${DMG_NAME}-temp.dmg"
 hdiutil create -volname "$PROJECT" -srcfolder "$STAGING" -ov -format UDRW "$TEMP"
 
-MOUNT="/Volumes/$PROJECT"
 hdiutil attach "$TEMP" -mountpoint "$MOUNT" -quiet
 sleep 2
 
@@ -52,7 +60,6 @@ EOF
 sync
 hdiutil detach "$MOUNT" -quiet
 
-FINAL="$RELEASE/${DMG_NAME}.dmg"
 hdiutil convert "$TEMP" -format UDZO -o "$FINAL"
 rm -f "$TEMP"
 rm -rf "$STAGING"
