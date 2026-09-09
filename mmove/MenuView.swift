@@ -4,6 +4,7 @@ import SwiftUI
 /// settings submenu, version, and quit.
 struct MenuView: View {
     @ObservedObject var settings: SettingsStore
+    @ObservedObject var engine: JiggleEngine
 
     /// The running app's marketing version, e.g. "1.0.0".
     static var appVersion: String {
@@ -11,7 +12,7 @@ struct MenuView: View {
     }
 
     var body: some View {
-        Text(settings.isEnabled ? "mmove is on" : "mmove is off")
+        Text(engine.statusText)
 
         Button(settings.isEnabled ? "Pause" : "Resume") {
             settings.isEnabled.toggle()
