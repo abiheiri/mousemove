@@ -41,6 +41,14 @@ final class JiggleEngine {
         isEnabled && idleSeconds >= TimeInterval(frequencySeconds)
     }
 
+    /// Pure decision: did posting our synthetic event reset the idle timer?
+    /// A reset drops idle time to near zero; anything above half the previous
+    /// reading is treated as "kept counting" (i.e. injection was blocked or
+    /// swallowed).
+    nonisolated static func idleWasReset(idleBefore: TimeInterval, idleAfter: TimeInterval) -> Bool {
+        idleAfter < idleBefore / 2
+    }
+
     private func reschedule() {
         timer?.invalidate()
         timer = nil

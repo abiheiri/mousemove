@@ -30,6 +30,21 @@ final class JiggleEngineTests: XCTestCase {
         XCTAssertFalse(JiggleEngine.shouldJiggle(isEnabled: false, idleSeconds: 9999, frequencySeconds: 60))
     }
 
+    // MARK: - Idle-reset classification
+
+    func testIdleWasResetWhenTimerDropsToNearZero() {
+        XCTAssertTrue(JiggleEngine.idleWasReset(idleBefore: 60, idleAfter: 0.2))
+    }
+
+    func testIdleWasResetFalseWhenTimerKeepsCounting() {
+        XCTAssertFalse(JiggleEngine.idleWasReset(idleBefore: 60, idleAfter: 65))
+    }
+
+    func testIdleWasResetRequiresSubstantialDrop() {
+        // A read 0.75 s later during continuous activity is not a reset.
+        XCTAssertFalse(JiggleEngine.idleWasReset(idleBefore: 40, idleAfter: 39.2))
+    }
+
     // MARK: - Timer scheduling
 
     @MainActor
