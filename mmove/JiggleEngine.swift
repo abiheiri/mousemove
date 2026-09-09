@@ -16,6 +16,9 @@ final class JiggleEngine: ObservableObject {
     private let assertion: IdleAssertion
     private var timer: Timer?
     private var settingsObserver: AnyCancellable?
+    /// Bumped on every lifecycle change (stop/reschedule) so a pending
+    /// verifyInjection asyncAfter can tell it is stale and bail out.
+    private var generation = 0
 
     /// True when the self-check proved synthetic events are not resetting the
     /// idle timer (e.g. blocked by EDR/policy). The power assertion still
@@ -47,6 +50,7 @@ final class JiggleEngine: ObservableObject {
     }
 
     func stop() {
+        generation += 1
         timer?.invalidate()
         timer = nil
         currentInterval = 0
@@ -81,6 +85,7 @@ final class JiggleEngine: ObservableObject {
     }
 
     private func reschedule() {
+        generation += 1
         timer?.invalidate()
         timer = nil
         guard settings.isEnabled else {
@@ -116,9 +121,12 @@ final class JiggleEngine: ObservableObject {
     }
 
     private func verifyInjection(idleBefore: TimeInterval, isRetry: Bool, cursor: CGPoint) {
+        let generation = self.generation
         DispatchQueue.main.asyncAfter(deadline: .now() + verifyDelay) { [weak self] in
             Task { @MainActor in
-                guard let self else { return }
+                // Bail if the engine stopped or rescheduled since this verify
+                // was queued — a stale verify must not post or mutate state.
+                guard let self, self.generation == generation else { return }
                 // A real user input event landing inside the verify window
                 // also resets the idle timer and classifies as "working" —
                 // an acceptable false negative, since user activity means

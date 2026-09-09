@@ -149,6 +149,36 @@ final class JiggleEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testStopDuringPendingVerifyCancelsRetry() async throws {
+        let store = SettingsStore(defaults: defaults)
+        let engine = JiggleEngine(settings: store)
+        var posted: [CGPoint] = []
+        var idleValues: [TimeInterval] = [100, 100]
+        engine.postEvent = { posted.append($0) }
+        engine.readCursor = { CGPoint(x: 100, y: 100) }
+        engine.readIdle = { idleValues.count > 1 ? idleValues.removeFirst() : idleValues[0] }
+        engine.verifyDelay = 0.01
+        engine.tick()
+        engine.stop()
+        try await Task.sleep(for: .milliseconds(200))
+        // Only the initial zero-delta post; no retry pair, no state mutation.
+        XCTAssertEqual(posted, [CGPoint(x: 100, y: 100)])
+        XCTAssertFalse(engine.injectionBlocked)
+    }
+
+    @MainActor
+    func testTickSkipsWhenCursorReadFails() {
+        let store = SettingsStore(defaults: defaults)
+        let engine = JiggleEngine(settings: store)
+        var posted: [CGPoint] = []
+        engine.postEvent = { posted.append($0) }
+        engine.readCursor = { nil }
+        engine.readIdle = { 100 }
+        engine.tick()
+        XCTAssertTrue(posted.isEmpty)
+    }
+
+    @MainActor
     func testStartHoldsAssertionAndStopReleasesIt() {
         let store = SettingsStore(defaults: defaults)
         let assertion = IdleAssertion()
