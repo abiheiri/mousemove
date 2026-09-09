@@ -179,6 +179,15 @@ final class JiggleEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testStopClearsInjectionBlocked() {
+        let store = SettingsStore(defaults: defaults)
+        let engine = JiggleEngine(settings: store)
+        engine.markInjectionBlockedForTesting()
+        engine.stop()
+        XCTAssertFalse(engine.injectionBlocked)
+    }
+
+    @MainActor
     func testStartHoldsAssertionAndStopReleasesIt() {
         let store = SettingsStore(defaults: defaults)
         let assertion = IdleAssertion()

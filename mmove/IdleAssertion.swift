@@ -15,6 +15,10 @@ final class IdleAssertion {
 
     func start(reason: String = "mmove is keeping the display awake") {
         guard !isActive else { return }
+        // A previous start() whose IOPM assertion failed left isActive false,
+        // so we can reach here again — release the old token before taking
+        // a new one instead of leaking it.
+        releaseActivity()
         let result = IOPMAssertionCreateWithName(
             kIOPMAssertionTypePreventUserIdleDisplaySleep as CFString,
             IOPMAssertionLevel(kIOPMAssertionLevelOn),
@@ -38,6 +42,10 @@ final class IdleAssertion {
             IOPMAssertionRelease(assertionID)
             isActive = false
         }
+        releaseActivity()
+    }
+
+    private func releaseActivity() {
         if let activity {
             ProcessInfo.processInfo.endActivity(activity)
             self.activity = nil

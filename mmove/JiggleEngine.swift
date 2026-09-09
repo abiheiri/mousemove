@@ -54,6 +54,7 @@ final class JiggleEngine: ObservableObject {
         timer?.invalidate()
         timer = nil
         currentInterval = 0
+        injectionBlocked = false
         assertion.stop()
     }
 
