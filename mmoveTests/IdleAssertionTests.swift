@@ -37,4 +37,13 @@ final class IdleAssertionTests: XCTestCase {
         assertion.stop()
         XCTAssertFalse(assertion.isActive)
     }
+
+    func testSuccessfulStartClearsCreationFailed() {
+        let assertion = IdleAssertion()
+        assertion.markCreationFailedForTesting()
+        assertion.start()
+        XCTAssertTrue(assertion.isActive)
+        XCTAssertFalse(assertion.creationFailed)
+        assertion.stop()
+    }
 }

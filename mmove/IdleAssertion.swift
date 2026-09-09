@@ -23,6 +23,7 @@ final class IdleAssertion {
         )
         if result == kIOReturnSuccess {
             isActive = true
+            creationFailed = false
         } else {
             creationFailed = true
         }
