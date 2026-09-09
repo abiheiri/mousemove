@@ -1,13 +1,15 @@
 # mmove
 
 A lightweight macOS menu bar utility that keeps your Mac from going idle by
-periodically nudging the cursor a pixel or two — just enough to reset the
-system idle timer. Useful during presentations, long reads, or any time you
-want the machine to stay active without touching power settings.
+periodically posting an invisible synthetic input event — the same signal real
+mouse movement produces — so the screensaver never starts and presence-aware
+apps like Slack keep you active. A held power assertion (the same mechanism as
+`caffeinate`) keeps the display awake even if security software blocks input
+injection.
 
 - Lives only in the menu bar; no Dock icon, no windows.
 - Never interferes while you're typing or using the mouse.
-- Net cursor movement is zero — it always returns to where it was.
+- Net cursor movement is zero — events are posted at the cursor's current position.
 - No special permissions required.
 
 ![mmove menu](docs/screenshot.png)
