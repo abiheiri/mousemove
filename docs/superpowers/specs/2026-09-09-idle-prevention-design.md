@@ -73,7 +73,8 @@ Two mechanisms run on each tick (belt-and-suspenders):
 - `IOPMAssertionCreateWithName` returning a non-success code → set
   `assertionFailed = true` so the menu can surface it.
 
-`mmoveApp` starts/stops the assertion in step with `SettingsStore.isEnabled`.
+`JiggleEngine` owns an `IdleAssertion` instance and starts/stops it in step
+with `SettingsStore.isEnabled` (from `reschedule()` / `stop()`).
 
 ### `MenuView.swift` (minor)
 

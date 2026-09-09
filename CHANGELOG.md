@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- Replaced cursor warping with synthetic input events: warping never reset the
+  system idle timer, so the screensaver and Slack idle detection fired anyway.
+
+### Added
+
+- Held display-sleep power assertion (caffeinate-style) while enabled, so the
+  display stays awake even if input injection is blocked by security software.
+- Self-check that detects blocked input injection and shows a degraded
+  "display-only mode" status in the menu.
+
 ## [1.0.0]
 
 ### Added

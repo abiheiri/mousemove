@@ -367,9 +367,11 @@ final class JiggleEngine: ObservableObject {
     @Published private(set) var injectionBlocked = false
 
     // Injectable seams for tests.
-    var readIdle: () -> TimeInterval = Self.secondsSinceLastInput
+    // (Note: `JiggleEngine.xxx`, not `Self.xxx` — Swift rejects `Self` in a
+    // class stored-property initializer.)
+    var readIdle: () -> TimeInterval = JiggleEngine.secondsSinceLastInput
     var readCursor: () -> CGPoint? = { CGEvent(source: nil)?.location }
-    var postEvent: (CGPoint) -> Void = Self.postMouseMoved
+    var postEvent: (CGPoint) -> Void = JiggleEngine.postMouseMoved
     var verifyDelay: TimeInterval = 0.75
 
     /// The interval the current timer is scheduled with (0 when stopped).
