@@ -1,23 +1,40 @@
 import Combine
 import CoreGraphics
 import Foundation
+import IOKit.pwr_mgt
 
-/// Periodically warps the cursor 1–2 px and back to reset the system idle
-/// timer. Never jiggles while the user is actively typing or moving the
-/// mouse. Uses CGWarpMouseCursorPosition, so no Accessibility permission
-/// is required.
+/// Periodically posts a synthetic mouseMoved event at the cursor's current
+/// position to reset the system idle timer (keeps the screensaver off and
+/// presence-aware apps like Slack active). Never posts while the user is
+/// actively typing or moving the mouse. Event posting needs no Accessibility
+/// permission. A held IdleAssertion guarantees display sleep stays off even
+/// if security software blocks the synthetic events; a post-and-verify
+/// self-check detects that case and exposes it as `injectionBlocked`.
 @MainActor
-final class JiggleEngine {
+final class JiggleEngine: ObservableObject {
     private let settings: SettingsStore
+    private let assertion: IdleAssertion
     private var timer: Timer?
     private var settingsObserver: AnyCancellable?
+
+    /// True when the self-check proved synthetic events are not resetting the
+    /// idle timer (e.g. blocked by EDR/policy). The power assertion still
+    /// protects against display sleep in that state.
+    @Published private(set) var injectionBlocked = false
+
+    // Injectable seams for tests.
+    var readIdle: () -> TimeInterval = JiggleEngine.secondsSinceLastInput
+    var readCursor: () -> CGPoint? = { CGEvent(source: nil)?.location }
+    var postEvent: (CGPoint) -> Void = JiggleEngine.postMouseMoved
+    var verifyDelay: TimeInterval = 0.75
 
     /// The interval the current timer is scheduled with (0 when stopped).
     /// Exposed for tests.
     private(set) var currentInterval: TimeInterval = 0
 
-    init(settings: SettingsStore) {
+    init(settings: SettingsStore, assertion: IdleAssertion = IdleAssertion()) {
         self.settings = settings
+        self.assertion = assertion
         // objectWillChange fires before the new value is stored; defer the
         // reschedule one runloop tick so we read the updated value.
         settingsObserver = settings.objectWillChange.sink { [weak self] _ in
@@ -33,9 +50,10 @@ final class JiggleEngine {
         timer?.invalidate()
         timer = nil
         currentInterval = 0
+        assertion.stop()
     }
 
-    /// Pure decision: jiggle only when enabled and the user has been idle
+    /// Pure decision: post only when enabled and the user has been idle
     /// at least one full frequency interval.
     nonisolated static func shouldJiggle(isEnabled: Bool, idleSeconds: TimeInterval, frequencySeconds: Int) -> Bool {
         isEnabled && idleSeconds >= TimeInterval(frequencySeconds)
@@ -49,13 +67,28 @@ final class JiggleEngine {
         idleAfter < idleBefore / 2
     }
 
+    var statusText: String {
+        if !settings.isEnabled { return "mmove is off" }
+        if injectionBlocked && assertion.creationFailed { return "mmove is on (protection unavailable on this Mac)" }
+        if injectionBlocked { return "mmove is on (input blocked — display-only mode)" }
+        if assertion.creationFailed { return "mmove is on (display sleep not blocked)" }
+        return "mmove is on"
+    }
+
+    /// Test hook to exercise the degraded status without faking the timer.
+    func markInjectionBlockedForTesting() {
+        injectionBlocked = true
+    }
+
     private func reschedule() {
         timer?.invalidate()
         timer = nil
         guard settings.isEnabled else {
             currentInterval = 0
+            assertion.stop()
             return
         }
+        assertion.start()
         let interval = TimeInterval(settings.frequencySeconds)
         currentInterval = interval
         let timer = Timer(timeInterval: interval, repeats: true) { [weak self] _ in
@@ -68,11 +101,42 @@ final class JiggleEngine {
         self.timer = timer
     }
 
-    private func tick() {
+    /// Internal (not private) so tests can drive a tick directly.
+    func tick() {
+        let idleBefore = readIdle()
         guard Self.shouldJiggle(isEnabled: settings.isEnabled,
-                                idleSeconds: Self.secondsSinceLastInput(),
+                                idleSeconds: idleBefore,
                                 frequencySeconds: settings.frequencySeconds) else { return }
-        jiggle()
+        // caffeinate -u equivalent: declare user activity to the power system.
+        Self.declareUserActivity()
+        guard let cursor = readCursor() else { return }
+        // Zero-delta post: cursor does not move, but the HID system sees input.
+        postEvent(cursor)
+        verifyInjection(idleBefore: idleBefore, isRetry: false, cursor: cursor)
+    }
+
+    private func verifyInjection(idleBefore: TimeInterval, isRetry: Bool, cursor: CGPoint) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + verifyDelay) { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                // A real user input event landing inside the verify window
+                // also resets the idle timer and classifies as "working" —
+                // an acceptable false negative, since user activity means
+                // the machine isn't idle anyway.
+                let idleAfter = self.readIdle()
+                if Self.idleWasReset(idleBefore: idleBefore, idleAfter: idleAfter) {
+                    self.injectionBlocked = false
+                } else if !isRetry {
+                    // Zero-delta posts are dropped by some environments; retry
+                    // once with a +1 px then back pair.
+                    self.postEvent(CGPoint(x: cursor.x + 1, y: cursor.y))
+                    self.postEvent(cursor)
+                    self.verifyInjection(idleBefore: idleBefore, isRetry: true, cursor: cursor)
+                } else {
+                    self.injectionBlocked = true
+                }
+            }
+        }
     }
 
     /// Seconds since the last keyboard/mouse/HID input system-wide.
@@ -81,26 +145,20 @@ final class JiggleEngine {
         return CGEventSource.secondsSinceLastEventType(.hidSystemState, eventType: anyInput)
     }
 
-    private func jiggle() {
-        guard let original = CGEvent(source: nil)?.location else { return }
-        let dx = CGFloat(Int.random(in: 1...2) * (Bool.random() ? 1 : -1))
-        let dy = CGFloat(Int.random(in: 1...2) * (Bool.random() ? 1 : -1))
-        let target = CGPoint(x: original.x + dx, y: original.y + dy)
-        // Keep the target at least 2 px inside the display bounds so the warp
-        // can't fail/clamp at screen edges or trigger a hot corner — either
-        // would break the warp-back guard and leave permanent drift. Stay in
-        // Quartz display coordinates to match CGEvent.location.
-        var display = CGDirectDisplayID()
-        var count: UInt32 = 0
-        guard CGGetDisplaysWithPoint(original, 1, &display, &count) == .success, count > 0 else { return }
-        let bounds = CGDisplayBounds(display).insetBy(dx: 2, dy: 2)
-        let clamped = CGPoint(x: min(max(target.x, bounds.minX), bounds.maxX),
-                              y: min(max(target.y, bounds.minY), bounds.maxY))
-        CGWarpMouseCursorPosition(clamped)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            // Warp back only if nothing else moved the cursor meanwhile.
-            guard let now = CGEvent(source: nil)?.location, now == clamped else { return }
-            CGWarpMouseCursorPosition(original)
-        }
+    /// Post a synthetic mouseMoved at `point` to the HID and session taps.
+    /// No Accessibility permission required.
+    static func postMouseMoved(at point: CGPoint) {
+        guard let source = CGEventSource(stateID: .hidSystemState),
+              let event = CGEvent(mouseEventSource: source, mouseType: .mouseMoved,
+                                  mouseCursorPosition: point, mouseButton: .left) else { return }
+        event.post(tap: .cghidEventTap)
+        event.post(tap: .cgSessionEventTap)
+    }
+
+    static func declareUserActivity() {
+        var assertionID = IOPMAssertionID(0)
+        IOPMAssertionDeclareUserActivity("mmove user activity" as CFString,
+                                         kIOPMUserActiveLocal,
+                                         &assertionID)
     }
 }
