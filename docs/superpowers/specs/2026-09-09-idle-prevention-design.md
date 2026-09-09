@@ -81,6 +81,8 @@ Status line becomes:
 
 - `mmove is on` — normal
 - `mmove is on (input blocked — display-only mode)` — injection self-check failed
+- `mmove is on (display sleep not blocked)` — power assertion creation failed
+- `mmove is on (protection unavailable on this Mac)` — both failed
 - `mmove is off` — paused
 
 ## Data Flow
