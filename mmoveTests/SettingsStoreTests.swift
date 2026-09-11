@@ -37,4 +37,25 @@ final class SettingsStoreTests: XCTestCase {
         let store = SettingsStore(defaults: defaults)
         XCTAssertEqual(store.frequencySeconds, 60)
     }
+
+    func testRuntimeLimitDefaultsToNoLimit() {
+        let store = SettingsStore(defaults: defaults)
+        XCTAssertEqual(store.runtimeLimitMinutes, 0)
+    }
+
+    func testRuntimeLimitPersistsAcrossInstances() {
+        let first = SettingsStore(defaults: defaults)
+        first.runtimeLimitMinutes = 240
+
+        let second = SettingsStore(defaults: defaults)
+        XCTAssertEqual(second.runtimeLimitMinutes, 240)
+    }
+
+    func testInvalidStoredRuntimeLimitFallsBackToNoLimit() {
+        defaults.set(-5, forKey: "runtimeLimitMinutes")
+        XCTAssertEqual(SettingsStore(defaults: defaults).runtimeLimitMinutes, 0)
+
+        defaults.set(5000, forKey: "runtimeLimitMinutes")
+        XCTAssertEqual(SettingsStore(defaults: defaults).runtimeLimitMinutes, 0)
+    }
 }
