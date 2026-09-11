@@ -134,7 +134,7 @@ git commit -m "Add persisted runtime limit setting"
 - Modify: `mmove/JiggleEngine.swift`
 - Test: `mmoveTests/JiggleEngineTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `mmoveTests/JiggleEngineTests.swift`, before the final closing brace:
 
@@ -252,7 +252,7 @@ Append to `mmoveTests/JiggleEngineTests.swift`, before the final closing brace:
     }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 
@@ -262,7 +262,7 @@ xcodebuild test -project mmove.xcodeproj -scheme mmoveTests -destination 'platfo
 
 Expected: FAIL to compile — no members `deadlineInterval`, `timeLimitReached`, `expireWindow`, `limitInterval`.
 
-- [ ] **Step 3: Implement the deadline timer**
+- [x] **Step 3: Implement the deadline timer**
 
 In `mmove/JiggleEngine.swift`:
 
@@ -401,12 +401,12 @@ f) Add `remainingSeconds` for the menu's "Time left" line, after `statusText`:
     }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run the same command as Step 2. Expected: PASS — all `JiggleEngineTests`
 including the 8 new ones.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add mmove/JiggleEngine.swift mmoveTests/JiggleEngineTests.swift
