@@ -423,7 +423,7 @@ git commit -m "Auto-pause mmove when the runtime limit elapses"
 No new unit tests (per spec; menu wiring is verified by the full build and
 manual check in Task 4).
 
-- [ ] **Step 1: Add the UI**
+- [x] **Step 1: Add the UI**
 
 Replace the `body` of `MenuView` in `mmove/MenuView.swift` with:
 
@@ -540,7 +540,7 @@ Add the helpers below `label(for:)`:
     }
 ```
 
-- [ ] **Step 2: Build**
+- [x] **Step 2: Build**
 
 Run:
 
@@ -550,7 +550,7 @@ xcodebuild -project mmove.xcodeproj -scheme mmove -configuration Debug -destinat
 
 Expected: BUILD SUCCEEDED.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add mmove/MenuView.swift
