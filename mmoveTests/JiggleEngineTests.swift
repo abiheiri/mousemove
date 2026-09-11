@@ -342,4 +342,44 @@ final class JiggleEngineTests: XCTestCase {
         XCTAssertEqual(engine.statusText, "mmove is off")
         engine.stop()
     }
+
+    @MainActor
+    func testChangingLimitMidWindowRestartsDeadline() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertEqual(engine.deadlineInterval, 7200)
+
+        store.runtimeLimitMinutes = 240
+        // objectWillChange is observed and rescheduling is deferred one runloop tick.
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertEqual(engine.deadlineInterval, 14400)
+        engine.stop()
+    }
+
+    @MainActor
+    func testRemainingSecondsTracksDeadline() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        XCTAssertNil(engine.remainingSeconds) // not started yet
+
+        engine.start()
+        let remaining = engine.remainingSeconds
+        XCTAssertNotNil(remaining)
+        XCTAssertEqual(remaining ?? 0, 7200, accuracy: 5)
+
+        engine.stop()
+        XCTAssertNil(engine.remainingSeconds)
+    }
+
+    @MainActor
+    func testRemainingSecondsNilWithoutLimit() {
+        let store = SettingsStore(defaults: defaults)
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertNil(engine.remainingSeconds)
+        engine.stop()
+    }
 }
