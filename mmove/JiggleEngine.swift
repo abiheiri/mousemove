@@ -25,6 +25,15 @@ final class JiggleEngine: ObservableObject {
     /// protects against display sleep in that state.
     @Published private(set) var injectionBlocked = false
 
+    /// True when the runtime window elapsed and the engine paused itself.
+    /// Cleared on the next resume, which starts a fresh window.
+    @Published private(set) var timeLimitReached = false
+
+    /// When the current window started (nil when stopped or no limit).
+    /// Read by MenuView for the "Time left" line.
+    private(set) var startedAt: Date?
+    private var deadlineTimer: Timer?
+
     // Injectable seams for tests.
     var readIdle: () -> TimeInterval = JiggleEngine.secondsSinceLastInput
     var readCursor: () -> CGPoint? = { CGEvent(source: nil)?.location }
@@ -34,6 +43,13 @@ final class JiggleEngine: ObservableObject {
     /// The interval the current timer is scheduled with (0 when stopped).
     /// Exposed for tests.
     private(set) var currentInterval: TimeInterval = 0
+
+    /// The interval the deadline timer is armed with (0 when no limit or
+    /// stopped). Exposed for tests.
+    private(set) var deadlineInterval: TimeInterval = 0
+
+    /// Injectable seam for tests: minutes -> seconds until expiry.
+    var limitInterval: (Int) -> TimeInterval = { TimeInterval($0 * 60) }
 
     init(settings: SettingsStore, assertion: IdleAssertion = IdleAssertion()) {
         self.settings = settings
@@ -53,6 +69,11 @@ final class JiggleEngine: ObservableObject {
         generation += 1
         timer?.invalidate()
         timer = nil
+        deadlineTimer?.invalidate()
+        deadlineTimer = nil
+        deadlineInterval = 0
+        startedAt = nil
+        timeLimitReached = false
         currentInterval = 0
         injectionBlocked = false
         assertion.stop()
@@ -73,11 +94,19 @@ final class JiggleEngine: ObservableObject {
     }
 
     var statusText: String {
+        if !settings.isEnabled && timeLimitReached { return "Paused — time limit reached" }
         if !settings.isEnabled { return "mmove is off" }
         if injectionBlocked && assertion.creationFailed { return "mmove is on (protection unavailable on this Mac)" }
         if injectionBlocked { return "mmove is on (input blocked — display-only mode)" }
         if assertion.creationFailed { return "mmove is on (display sleep not blocked)" }
         return "mmove is on"
+    }
+
+    /// Seconds left in the current runtime window; nil when there is no
+    /// limit or the engine is paused.
+    var remainingSeconds: TimeInterval? {
+        guard settings.isEnabled, let startedAt, deadlineInterval > 0 else { return nil }
+        return max(0, deadlineInterval - Date().timeIntervalSince(startedAt))
     }
 
     /// Test hook to exercise the degraded status without faking the timer.
@@ -89,11 +118,16 @@ final class JiggleEngine: ObservableObject {
         generation += 1
         timer?.invalidate()
         timer = nil
+        deadlineTimer?.invalidate()
+        deadlineTimer = nil
+        deadlineInterval = 0
+        startedAt = nil
         guard settings.isEnabled else {
             currentInterval = 0
             assertion.stop()
             return
         }
+        timeLimitReached = false
         assertion.start()
         let interval = TimeInterval(settings.frequencySeconds)
         currentInterval = interval
@@ -105,6 +139,42 @@ final class JiggleEngine: ObservableObject {
         timer.tolerance = interval * 0.1
         RunLoop.main.add(timer, forMode: .default)
         self.timer = timer
+        armDeadline()
+    }
+
+    /// Arms the one-shot deadline timer when a runtime limit is set.
+    private func armDeadline() {
+        let limit = settings.runtimeLimitMinutes
+        guard limit > 0 else { return }
+        startedAt = Date()
+        let deadline = limitInterval(limit)
+        deadlineInterval = deadline
+        let generation = self.generation
+        let timer = Timer(timeInterval: deadline, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                // Bail if the engine stopped or rescheduled since this
+                // deadline was armed.
+                guard let self, self.generation == generation else { return }
+                self.expireWindow()
+            }
+        }
+        // Allow coalescing, but never more than a minute late.
+        timer.tolerance = min(deadline * 0.05, 60)
+        RunLoop.main.add(timer, forMode: .default)
+        deadlineTimer = timer
+    }
+
+    /// Ends the runtime window: pause via the normal isEnabled path (stops
+    /// the jiggle timer and releases the power assertion so the Mac idles
+    /// naturally) and flag the expiry for the status text. Internal (not
+    /// private) so tests can drive it directly.
+    func expireWindow() {
+        guard settings.isEnabled else { return }
+        deadlineTimer?.invalidate()
+        deadlineTimer = nil
+        deadlineInterval = 0
+        timeLimitReached = true
+        settings.isEnabled = false
     }
 
     /// Internal (not private) so tests can drive a tick directly.

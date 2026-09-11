@@ -230,4 +230,116 @@ final class JiggleEngineTests: XCTestCase {
         engine.markInjectionBlockedForTesting()
         XCTAssertEqual(engine.statusText, "mmove is on (protection unavailable on this Mac)")
     }
+
+    // MARK: - Runtime limit
+
+    @MainActor
+    func testLimitArmsDeadlineTimer() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertEqual(engine.deadlineInterval, 7200)
+        engine.stop()
+    }
+
+    @MainActor
+    func testNoLimitArmsNoDeadline() {
+        let store = SettingsStore(defaults: defaults)
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertEqual(engine.deadlineInterval, 0)
+        engine.stop()
+    }
+
+    @MainActor
+    func testExpireWindowPausesEngineAndReleasesAssertion() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let assertion = IdleAssertion()
+        let engine = JiggleEngine(settings: store, assertion: assertion)
+        engine.start()
+        engine.expireWindow()
+        // isEnabled=false triggers a deferred reschedule one runloop tick later.
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertFalse(store.isEnabled)
+        XCTAssertTrue(engine.timeLimitReached)
+        XCTAssertEqual(engine.currentInterval, 0)
+        XCTAssertEqual(engine.deadlineInterval, 0)
+        XCTAssertFalse(assertion.isActive)
+    }
+
+    @MainActor
+    func testResumeAfterExpiryClearsFlagAndRearmsDeadline() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        engine.expireWindow()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertTrue(engine.timeLimitReached)
+
+        store.isEnabled = true
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertFalse(engine.timeLimitReached)
+        XCTAssertEqual(engine.deadlineInterval, 7200)
+        engine.stop()
+    }
+
+    @MainActor
+    func testStopClearsDeadlineState() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        engine.stop()
+        XCTAssertEqual(engine.deadlineInterval, 0)
+        XCTAssertFalse(engine.timeLimitReached)
+    }
+
+    @MainActor
+    func testDeadlineFiresAndPausesEngine() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 5
+        let engine = JiggleEngine(settings: store)
+        // Shrink a "minute" so the test doesn't wait 5 real minutes.
+        engine.limitInterval = { _ in 0.05 }
+        engine.start()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.5))
+        XCTAssertFalse(store.isEnabled)
+        XCTAssertTrue(engine.timeLimitReached)
+        XCTAssertEqual(engine.currentInterval, 0)
+    }
+
+    @MainActor
+    func testStopPreventsPendingDeadlineFromFiring() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 5
+        let engine = JiggleEngine(settings: store)
+        engine.limitInterval = { _ in 0.05 }
+        engine.start()
+        engine.stop()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.3))
+        XCTAssertTrue(store.isEnabled)
+        XCTAssertFalse(engine.timeLimitReached)
+    }
+
+    @MainActor
+    func testStatusTextShowsTimeLimitReachedOnlyAfterExpiry() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        engine.expireWindow()
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertEqual(engine.statusText, "Paused — time limit reached")
+
+        // A manual pause after a resume shows the normal "off" text.
+        store.isEnabled = true
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        store.isEnabled = false
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertEqual(engine.statusText, "mmove is off")
+        engine.stop()
+    }
 }
