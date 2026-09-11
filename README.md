@@ -20,6 +20,9 @@ Click the mouse icon in the menu bar:
 
 - **Pause / Resume** — toggle the activity timer.
 - **Settings** — how often to nudge: every 15s, 30s, 60s (default), 2m, or 5m.
+- **Settings → Run for** — optional runtime limit: no limit, 2/4/6/8 hours,
+  or custom minutes. mmove pauses itself when the window elapses; a
+  "Time left" line under the status shows the remaining time.
 - **Quit mmove**.
 
 ## Build

@@ -382,4 +382,17 @@ final class JiggleEngineTests: XCTestCase {
         XCTAssertNil(engine.remainingSeconds)
         engine.stop()
     }
+
+    @MainActor
+    func testManualPauseClearsDeadline() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        store.isEnabled = false
+        // objectWillChange is observed and rescheduling is deferred one runloop tick.
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertEqual(engine.deadlineInterval, 0)
+        XCTAssertFalse(engine.timeLimitReached)
+    }
 }

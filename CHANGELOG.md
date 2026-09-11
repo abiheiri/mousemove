@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- Settings → "Run for" submenu: No limit, 2/4/6/8 hours, or a Custom…
+  entry in minutes.
+- Auto-pause when the runtime window elapses, so the Mac idles naturally
+  again and the screensaver and display sleep resume.
+- "Paused — time limit reached" status after the limit expires.
+- "Time left: X h Y min" line under the status while a limit is running.
+
 ## [1.1.0] - 2026-09-09
 
 ### Fixed

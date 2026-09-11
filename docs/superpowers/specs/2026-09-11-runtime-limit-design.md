@@ -37,8 +37,8 @@ naturally again and the screensaver / display sleep work.
 
 New state:
 
-- `private(set) var startedAt: Date?` (read-only exposure; MenuView uses it
-  for the "Time left" line)
+- `private(set) var startedAt: Date?` (read-only exposure; internal basis
+  for `remainingSeconds`)
 - `private var deadlineTimer: Timer?`
 - `@Published private(set) var timeLimitReached = false`
 - `private(set) var deadlineInterval: TimeInterval = 0` — the interval the
@@ -85,10 +85,11 @@ Behavior:
   setting unchanged. Valid input sets `runtimeLimitMinutes` and
   `customMinutes`.
 - While running with a limit, a "Time left: X h Y min" line appears under the
-  status text, computed from `engine.startedAt` (exposed read-only) and the
-  limit. The line is absent when there is no limit or the engine is paused.
-  The value refreshes when the menu is opened (MenuBarExtra re-renders on
-  open); no live ticking countdown.
+  status text, sourced from `engine.remainingSeconds`, which the engine
+  computes from `startedAt` and `deadlineInterval`. It is nil when there is
+  no limit or the engine is paused, so the line is absent then. The value
+  refreshes when the menu is opened (MenuBarExtra re-renders on open); no
+  live ticking countdown.
 
 ## Testing
 
