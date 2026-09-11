@@ -109,6 +109,7 @@ struct MenuView: View {
         alert.addButton(withTitle: "Set")
         alert.addButton(withTitle: "Cancel")
         alert.window.initialFirstResponder = field
+        NSApp.activate(ignoringOtherApps: true)
         guard alert.runModal() == .alertFirstButtonReturn else { return }
         let trimmed = field.stringValue.trimmingCharacters(in: .whitespaces)
         guard let minutes = Int(trimmed), SettingsStore.isValidLimit(minutes), minutes > 0 else { return }
@@ -118,7 +119,7 @@ struct MenuView: View {
 
     /// "2 h 5 min" / "42 min"; rounds up so the line never reads "0 min".
     static func formatRemaining(_ seconds: TimeInterval) -> String {
-        let total = Int(seconds.rounded(.up))
+        let total = max(Int(seconds.rounded(.up)), 1)
         let hours = total / 3600
         let minutes = (total % 3600) / 60
         return hours > 0 ? "\(hours) h \(minutes) min" : "\(minutes) min"
