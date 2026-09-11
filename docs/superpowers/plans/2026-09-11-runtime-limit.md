@@ -563,7 +563,7 @@ git commit -m "Add runtime limit picker to the settings menu"
 
 **Files:** none (verification only).
 
-- [ ] **Step 1: Run the entire test suite**
+- [x] **Step 1: Run the entire test suite**
 
 Run:
 
@@ -574,7 +574,7 @@ xcodebuild test -project mmove.xcodeproj -scheme mmoveTests -destination 'platfo
 Expected: PASS — all tests in `SettingsStoreTests`, `JiggleEngineTests`, and
 `IdleAssertionTests`.
 
-- [ ] **Step 2: Release build (matches CI)**
+- [x] **Step 2: Release build (matches CI)**
 
 Run:
 
