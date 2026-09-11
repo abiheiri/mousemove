@@ -24,7 +24,7 @@ Filter to one class with `-only-testing:mmoveTests/SettingsStoreTests` (etc.) ap
 - Modify: `mmove/SettingsStore.swift`
 - Test: `mmoveTests/SettingsStoreTests.swift`
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `mmoveTests/SettingsStoreTests.swift`, before the final closing brace:
 
@@ -51,7 +51,7 @@ Append to `mmoveTests/SettingsStoreTests.swift`, before the final closing brace:
     }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 
@@ -61,7 +61,7 @@ xcodebuild test -project mmove.xcodeproj -scheme mmoveTests -destination 'platfo
 
 Expected: FAIL to compile — "value of type 'SettingsStore' has no member 'runtimeLimitMinutes'".
 
-- [ ] **Step 3: Implement `runtimeLimitMinutes`**
+- [x] **Step 3: Implement `runtimeLimitMinutes`**
 
 In `mmove/SettingsStore.swift`, add the preset list and max next to the existing statics:
 
@@ -115,11 +115,11 @@ Add the validator at the bottom of the type:
     }
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run the same command as Step 2. Expected: PASS, 6 tests in `SettingsStoreTests`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add mmove/SettingsStore.swift mmoveTests/SettingsStoreTests.swift
