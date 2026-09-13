@@ -17,7 +17,17 @@ struct MMoveApp: App {
         MenuBarExtra {
             MenuView(settings: settings, engine: engine)
         } label: {
-            Image(systemName: "computermouse")
+            if let windowEnd = engine.windowEnd {
+                Label {
+                    Text(timerInterval: Date()...windowEnd, countsDown: true)
+                } icon: {
+                    Image(systemName: "computermouse")
+                }
+            } else if settings.isEnabled {
+                Label("On", systemImage: "computermouse")
+            } else {
+                Image(systemName: "computermouse")
+            }
         }
         .menuBarExtraStyle(.menu)
     }
