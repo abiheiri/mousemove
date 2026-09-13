@@ -217,7 +217,7 @@ with:
         } label: {
             if let windowEnd = engine.windowEnd {
                 Label {
-                    Text(timerInterval: Date()...windowEnd, countsDown: true)
+                    Text(timerInterval: min(Date(), windowEnd)...windowEnd, countsDown: true)
                 } icon: {
                     Image(systemName: "computermouse")
                 }
@@ -230,6 +230,8 @@ with:
         .menuBarExtraStyle(.menu)
     }
 ```
+
+Note the `min(Date(), windowEnd)` clamp: the deadline timer's `tolerance` can let `windowEnd` sit in the past for up to 60 s while the engine still runs, and an inverted `ClosedRange` (lowerBound > upperBound) traps at the `...` operator. Clamping the lower bound renders `0:00` during that tail instead of crashing.
 
 Behavior this produces:
 - Running with a runtime limit → mouse icon + live countdown to window end.
