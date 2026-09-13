@@ -4,6 +4,20 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.2] - 2026-09-13
+
+### Fixed
+
+- The menu bar countdown now shows the mouse icon next to it. SwiftUI's
+  MenuBarExtra renders only one label element, so icon and text are now
+  composited into a single image.
+
+### Changed
+
+- Clearer menu structure: frequency presets live under "Jiggle every" and
+  runtime limits under "Run for", as two separate submenus instead of a
+  generic "Settings" menu.
+
 ## [1.3.1] - 2026-09-13
 
 ### Fixed
