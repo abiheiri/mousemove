@@ -26,7 +26,7 @@ Expected at the end of every task: `** TEST SUCCEEDED **`
 
 Context: `JiggleEngine` already tracks `startedAt: Date?` and `deadlineInterval: TimeInterval` (both non-published, set in `armDeadline()`/`reschedule()`/`stop()`). Tests use an isolated `UserDefaults` suite per test and `@MainActor` test methods. Rescheduling after a settings change is deferred one runloop tick, which tests handle with `RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append this new MARK section inside `JiggleEngineTests` in `mmoveTests/JiggleEngineTests.swift`, right before the final closing brace of the class:
 
@@ -94,7 +94,7 @@ Append this new MARK section inside `JiggleEngineTests` in `mmoveTests/JiggleEng
     }
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run:
 ```bash
@@ -102,7 +102,7 @@ xcodebuild test -project mmove.xcodeproj -scheme mmoveTests -destination 'platfo
 ```
 Expected: FAIL — compile error, `value of type 'JiggleEngine' has no member 'windowEnd'`.
 
-- [ ] **Step 3: Implement `windowEnd` in JiggleEngine**
+- [x] **Step 3: Implement `windowEnd` in JiggleEngine**
 
 In `mmove/JiggleEngine.swift`, add the published property directly below the `timeLimitReached` property (after line 30):
 
@@ -158,18 +158,19 @@ In `armDeadline()`, set `windowEnd` once the deadline is known — change:
         deadlineInterval = deadline
 ```
 
-to:
+to (as shipped — one clock read, reused for both, so `windowEnd` and `remainingSeconds` share the same `startedAt`):
 
 ```swift
-        startedAt = Date()
+        let startedAt = Date()
+        self.startedAt = startedAt
         let deadline = limitInterval(limit)
         deadlineInterval = deadline
-        windowEnd = Date().addingTimeInterval(deadline)
+        windowEnd = startedAt.addingTimeInterval(deadline)
 ```
 
-(`reschedule()` already clears `startedAt`/`deadlineInterval` before the guard; `windowEnd` is only ever non-nil after `armDeadline()` sets it, and the two paths that clear deadline state — `stop()` and the disabled branch of `reschedule()` — now clear it too. `expireWindow()` needs no direct change: it sets `isEnabled = false`, which routes through the disabled branch of `reschedule()`.)
+As shipped, `windowEnd` is cleared on every path that tears down deadline state: `stop()`, the top of `reschedule()` (alongside `startedAt = nil`, covering both the disabled branch and removing the limit mid-window), and synchronously in `expireWindow()` (alongside `deadlineInterval = 0`) so no re-render can observe a stale non-nil value.
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run:
 ```bash
@@ -177,7 +178,7 @@ xcodebuild test -project mmove.xcodeproj -scheme mmoveTests -destination 'platfo
 ```
 Expected: `** TEST SUCCEEDED **` — all existing tests plus the 5 new ones pass.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add mmove/JiggleEngine.swift mmoveTests/JiggleEngineTests.swift
@@ -193,7 +194,7 @@ git commit -m "Publish windowEnd from JiggleEngine for menu bar countdown"
 
 Context: the label is currently a fixed `Image(systemName: "computermouse")`. `mmoveApp` holds `settings` and `engine` as `@StateObject`, so the label re-renders when `engine.windowEnd` or `settings.isEnabled` changes. `Text(timerInterval:countsDown:)` updates itself once per second — no manual timer needed.
 
-- [ ] **Step 1: Update the label**
+- [x] **Step 1: Update the label**
 
 In `mmove/mmoveApp.swift`, replace the whole `body` property:
 
@@ -238,7 +239,7 @@ Behavior this produces:
 - Running with no limit → mouse icon + "On".
 - Paused (manual or time limit reached) → plain mouse icon, unchanged from today.
 
-- [ ] **Step 2: Build and run the full test suite**
+- [x] **Step 2: Build and run the full test suite**
 
 Run:
 ```bash
@@ -246,7 +247,7 @@ xcodebuild test -project mmove.xcodeproj -scheme mmoveTests -destination 'platfo
 ```
 Expected: `** TEST SUCCEEDED **`. (The label change is SwiftUI view code with no unit-testable logic; existing tests must keep passing.)
 
-- [ ] **Step 3: Manual smoke check**
+- [x] **Step 3: Manual smoke check**
 
 Run the app:
 ```bash
@@ -259,7 +260,7 @@ Then launch the built app (or run from Xcode) and confirm in the menu bar:
 
 If the countdown or "On" text does not appear, check that `engine.windowEnd` is non-nil (limit set and engine enabled) before suspecting the view code.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add mmove/mmoveApp.swift

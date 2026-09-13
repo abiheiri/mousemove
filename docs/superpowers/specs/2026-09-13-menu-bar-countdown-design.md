@@ -27,20 +27,22 @@ are unchanged.
 ### JiggleEngine
 
 - Add `@Published private(set) var windowEnd: Date?`.
-- Set it in `armDeadline()` to `startedAt + deadlineInterval` (i.e. the
-  moment the current runtime window expires).
-- Clear it in `stop()` and in the disabled branch of `reschedule()`.
-- `expireWindow()` needs no direct change: it sets `isEnabled = false`,
-  which triggers `reschedule()` through the existing `objectWillChange`
-  observer, clearing `windowEnd`.
+- Set it in `armDeadline()` to `startedAt + deadline` (i.e. the moment the
+  current runtime window expires), reusing the same captured `Date` for both
+  so `windowEnd` and `remainingSeconds` stay consistent.
+- Clear it in `stop()`, at the top of `reschedule()` (covers both the
+  disabled path and removing the limit mid-window), and synchronously in
+  `expireWindow()`.
 
 ### mmoveApp
 
 - The `MenuBarExtra` label switches on engine state:
   - `windowEnd != nil` → `Label` with the `computermouse` SF Symbol and
-    `Text(timerInterval: Date()...end, countsDown: true)`. SwiftUI
-    re-renders the countdown once per second automatically; no manual
-    timer is added.
+    `Text(timerInterval: min(Date(), end)...end, countsDown: true)`. The
+    lower bound is clamped because the deadline timer's tolerance can leave
+    `windowEnd` in the past while the engine still runs, and an inverted
+    `ClosedRange` traps. SwiftUI re-renders the countdown once per second
+    automatically; no manual timer is added.
   - `settings.isEnabled` (no limit) → `Label` with icon and `On`.
   - otherwise → the current plain `Image(systemName: "computermouse")`.
 
@@ -56,8 +58,12 @@ Extend `JiggleEngineTests`:
 
 - `windowEnd` is set to roughly `now + limit` when starting with a
   runtime limit.
+- `windowEnd` is `nil` when running with no limit.
 - `windowEnd` is `nil` when the engine is paused / disabled.
-- `windowEnd` is `nil` after `expireWindow()`.
+- `windowEnd` is `nil` immediately after `expireWindow()` (synchronous
+  clear, before the deferred reschedule).
+- `windowEnd` is `nil` after `stop()`.
+- `windowEnd` is `nil` after removing the limit mid-window.
 
 ## Out of scope
 
