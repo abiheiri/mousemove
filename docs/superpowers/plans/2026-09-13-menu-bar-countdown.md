@@ -209,7 +209,9 @@ In `mmove/mmoveApp.swift`, replace the whole `body` property:
     }
 ```
 
-with (as shipped — see the postmortem notes below):
+with (as shipped — see the postmortem notes below; the label uses
+`MMoveApp.menuBarImage(text:)`, a helper that composites the SF Symbol and
+the string into a single template `NSImage`):
 
 ```swift
     var body: some Scene {
@@ -217,15 +219,9 @@ with (as shipped — see the postmortem notes below):
             MenuView(settings: settings, engine: engine)
         } label: {
             if let countdown = engine.countdownText {
-                // MenuBarExtra shows only one label element: a Label with a
-                // systemImage drops its title. An inline symbol inside a
-                // single Text is the reliable way to get icon + text.
-                // The string itself comes from the engine's 1s timer — a
-                // live-updating Text(timerInterval:) here sends the
-                // MenuBarExtra into a runaway update loop (100% CPU).
-                Text("\(Image(systemName: "computermouse")) \(countdown)")
+                Image(nsImage: Self.menuBarImage(text: countdown))
             } else if settings.isEnabled {
-                Text("\(Image(systemName: "computermouse")) On")
+                Image(nsImage: Self.menuBarImage(text: "On"))
             } else {
                 Image(systemName: "computermouse")
             }
@@ -245,10 +241,13 @@ that static string. `JiggleEngine.formatCountdown(_:)` renders "M:SS" under
 an hour and "H:MM:SS" at or above, clamping negative values to "0:00" (the
 deadline timer's tolerance can leave the window in the past for up to 60 s).
 
-Postmortem 2 (fixed in 1.3.2): even with the static string, `Label` with a
-`systemImage` (or icon closure) renders only the icon in the menu bar — the
-title is silently dropped (verified via the status item's accessibility
-title). Embedding the SF Symbol inline in a single `Text` renders both.
+Postmortem 2 (fixed in 1.3.2): even with the static string, MenuBarExtra
+refused to show icon + text together. Verified on macOS 26: `Label` with a
+`systemImage` (or icon closure) renders only the icon; an inline
+`Image(systemName:)` inside `Text` renders only the text; an `HStack` of the
+two renders only the icon. The working solution is compositing the SF Symbol
+and the string into a single template `NSImage` (`MMoveApp.menuBarImage(text:)`)
+and using `Image(nsImage:)` as the whole label.
 
 Behavior this produces:
 - Running with a runtime limit → mouse icon + live countdown to window end.

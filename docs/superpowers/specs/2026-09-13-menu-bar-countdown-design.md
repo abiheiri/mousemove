@@ -41,11 +41,12 @@ are unchanged.
 ### mmoveApp
 
 - The `MenuBarExtra` label switches on engine state. MenuBarExtra renders
-  only ONE element from its label — a `Label` with a `systemImage` shows
-  the icon and drops the title — so icon + text are combined by embedding
-  the SF Symbol inline in a single `Text`:
-  - `countdownText != nil` → `Text("\(Image(systemName: "computermouse")) \(countdown)")`
-  - `settings.isEnabled` (no limit) → same form with `On`
+  only ONE label element — a `Label` shows its icon and drops its title, an
+  inline symbol inside `Text` drops the image, and an `HStack` drops the
+  text (all verified on macOS 26). Icon + text are therefore composited
+  into a single template `NSImage` (`MMoveApp.menuBarImage(text:)`):
+  - `countdownText != nil` → composite image of symbol + countdown
+  - `settings.isEnabled` (no limit) → composite image of symbol + `On`
   - otherwise → the current plain `Image(systemName: "computermouse")`.
 
 ## Performance

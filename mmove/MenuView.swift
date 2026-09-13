@@ -1,7 +1,8 @@
 import SwiftUI
 
 /// Content of the menu bar extra: status, time-left line, pause/resume,
-/// settings submenu (frequency and runtime limit), version, and quit.
+/// "Jiggle every" (frequency) and "Run for" (runtime limit) submenus,
+/// version, and quit.
 struct MenuView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var engine: JiggleEngine
@@ -21,7 +22,7 @@ struct MenuView: View {
             settings.isEnabled.toggle()
         }
 
-        Menu("Settings") {
+        Menu("Jiggle every") {
             ForEach(SettingsStore.frequencyPresets, id: \.self) { seconds in
                 Button {
                     settings.frequencySeconds = seconds
@@ -33,38 +34,36 @@ struct MenuView: View {
                     }
                 }
             }
+        }
 
-            Divider()
-
-            Menu("Run for") {
+        Menu("Run for") {
+            Button {
+                settings.runtimeLimitMinutes = 0
+            } label: {
+                if settings.runtimeLimitMinutes == 0 {
+                    Label("No limit", systemImage: "checkmark")
+                } else {
+                    Text("No limit")
+                }
+            }
+            ForEach(SettingsStore.runtimePresets, id: \.self) { minutes in
                 Button {
-                    settings.runtimeLimitMinutes = 0
+                    settings.runtimeLimitMinutes = minutes
                 } label: {
-                    if settings.runtimeLimitMinutes == 0 {
-                        Label("No limit", systemImage: "checkmark")
+                    if minutes == settings.runtimeLimitMinutes {
+                        Label(runtimeLabel(for: minutes), systemImage: "checkmark")
                     } else {
-                        Text("No limit")
+                        Text(runtimeLabel(for: minutes))
                     }
                 }
-                ForEach(SettingsStore.runtimePresets, id: \.self) { minutes in
-                    Button {
-                        settings.runtimeLimitMinutes = minutes
-                    } label: {
-                        if minutes == settings.runtimeLimitMinutes {
-                            Label(runtimeLabel(for: minutes), systemImage: "checkmark")
-                        } else {
-                            Text(runtimeLabel(for: minutes))
-                        }
-                    }
-                }
-                Button {
-                    showCustomLimitPanel()
-                } label: {
-                    if isCustomLimitActive {
-                        Label("Custom (\(settings.runtimeLimitMinutes) min)", systemImage: "checkmark")
-                    } else {
-                        Text("Custom…")
-                    }
+            }
+            Button {
+                showCustomLimitPanel()
+            } label: {
+                if isCustomLimitActive {
+                    Label("Custom (\(settings.runtimeLimitMinutes) min)", systemImage: "checkmark")
+                } else {
+                    Text("Custom…")
                 }
             }
         }
@@ -81,9 +80,9 @@ struct MenuView: View {
     }
 
     private func label(for seconds: Int) -> String {
-        if seconds < 60 { return "Every \(seconds) seconds" }
+        if seconds < 60 { return "\(seconds) seconds" }
         let minutes = seconds / 60
-        return minutes == 1 ? "Every minute" : "Every \(minutes) minutes"
+        return minutes == 1 ? "1 minute" : "\(minutes) minutes"
     }
 
     private var isCustomLimitActive: Bool {
