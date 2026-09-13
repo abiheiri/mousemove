@@ -181,6 +181,7 @@ final class JiggleEngine: ObservableObject {
         deadlineTimer?.invalidate()
         deadlineTimer = nil
         deadlineInterval = 0
+        windowEnd = nil
         timeLimitReached = true
         settings.isEnabled = false
     }

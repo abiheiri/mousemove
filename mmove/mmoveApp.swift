@@ -19,7 +19,7 @@ struct MMoveApp: App {
         } label: {
             if let windowEnd = engine.windowEnd {
                 Label {
-                    Text(timerInterval: Date()...windowEnd, countsDown: true)
+                    Text(timerInterval: min(Date(), windowEnd)...windowEnd, countsDown: true)
                 } icon: {
                     Image(systemName: "computermouse")
                 }

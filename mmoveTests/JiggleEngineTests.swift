@@ -450,6 +450,19 @@ final class JiggleEngineTests: XCTestCase {
     }
 
     @MainActor
+    func testExpireWindowClearsWindowEndImmediately() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertNotNil(engine.windowEnd)
+
+        engine.expireWindow()
+        // Cleared synchronously, before the deferred reschedule runs.
+        XCTAssertNil(engine.windowEnd)
+    }
+
+    @MainActor
     func testStopClearsWindowEnd() {
         let store = SettingsStore(defaults: defaults)
         store.runtimeLimitMinutes = 120
