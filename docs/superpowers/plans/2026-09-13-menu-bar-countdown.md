@@ -209,10 +209,7 @@ In `mmove/mmoveApp.swift`, replace the whole `body` property:
     }
 ```
 
-with (as shipped — see the postmortem note below; the live-updating
-`Text(timerInterval:)` originally prescribed here caused a runaway update
-loop and 100% CPU, so the countdown is a static string published by the
-engine's own 1 s timer):
+with (as shipped — see the postmortem notes below):
 
 ```swift
     var body: some Scene {
@@ -220,16 +217,15 @@ engine's own 1 s timer):
             MenuView(settings: settings, engine: engine)
         } label: {
             if let countdown = engine.countdownText {
-                // A static string updated by the engine's own 1s timer —
-                // a live-updating Text(timerInterval:) here sends the
+                // MenuBarExtra shows only one label element: a Label with a
+                // systemImage drops its title. An inline symbol inside a
+                // single Text is the reliable way to get icon + text.
+                // The string itself comes from the engine's 1s timer — a
+                // live-updating Text(timerInterval:) here sends the
                 // MenuBarExtra into a runaway update loop (100% CPU).
-                Label {
-                    Text(countdown)
-                } icon: {
-                    Image(systemName: "computermouse")
-                }
+                Text("\(Image(systemName: "computermouse")) \(countdown)")
             } else if settings.isEnabled {
-                Label("On", systemImage: "computermouse")
+                Text("\(Image(systemName: "computermouse")) On")
             } else {
                 Image(systemName: "computermouse")
             }
@@ -238,7 +234,7 @@ engine's own 1 s timer):
     }
 ```
 
-Postmortem (fixed in 1.3.1): the `Text(timerInterval:countsDown:)` version of
+Postmortem 1 (fixed in 1.3.1): the `Text(timerInterval:countsDown:)` version of
 this label sent SwiftUI's `MenuBarExtraHost` into a runaway update loop —
 every update rewrote the status-item image (`NSStatusBarButton.setImage:`,
 full SF Symbol re-resolution) and immediately scheduled the next one, pinning
@@ -248,6 +244,11 @@ that publishes a pre-rendered `countdownText: String?`, and the label renders
 that static string. `JiggleEngine.formatCountdown(_:)` renders "M:SS" under
 an hour and "H:MM:SS" at or above, clamping negative values to "0:00" (the
 deadline timer's tolerance can leave the window in the past for up to 60 s).
+
+Postmortem 2 (fixed in 1.3.2): even with the static string, `Label` with a
+`systemImage` (or icon closure) renders only the icon in the menu bar — the
+title is silently dropped (verified via the status item's accessibility
+title). Embedding the SF Symbol inline in a single `Text` renders both.
 
 Behavior this produces:
 - Running with a runtime limit → mouse icon + live countdown to window end.

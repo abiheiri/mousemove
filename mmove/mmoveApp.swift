@@ -18,16 +18,15 @@ struct MMoveApp: App {
             MenuView(settings: settings, engine: engine)
         } label: {
             if let countdown = engine.countdownText {
-                // A static string updated by the engine's own 1s timer —
-                // a live-updating Text(timerInterval:) here sends the
+                // MenuBarExtra shows only one label element: a Label with a
+                // systemImage drops its title. An inline symbol inside a
+                // single Text is the reliable way to get icon + text.
+                // The string itself comes from the engine's 1s timer — a
+                // live-updating Text(timerInterval:) here sends the
                 // MenuBarExtra into a runaway update loop (100% CPU).
-                Label {
-                    Text(countdown)
-                } icon: {
-                    Image(systemName: "computermouse")
-                }
+                Text("\(Image(systemName: "computermouse")) \(countdown)")
             } else if settings.isEnabled {
-                Label("On", systemImage: "computermouse")
+                Text("\(Image(systemName: "computermouse")) On")
             } else {
                 Image(systemName: "computermouse")
             }

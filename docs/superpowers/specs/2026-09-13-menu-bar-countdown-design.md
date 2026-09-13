@@ -40,10 +40,12 @@ are unchanged.
 
 ### mmoveApp
 
-- The `MenuBarExtra` label switches on engine state:
-  - `countdownText != nil` → `Label` with the `computermouse` SF Symbol and
-    `Text(countdownText)` (static string; updates via the engine's timer).
-  - `settings.isEnabled` (no limit) → `Label` with icon and `On`.
+- The `MenuBarExtra` label switches on engine state. MenuBarExtra renders
+  only ONE element from its label — a `Label` with a `systemImage` shows
+  the icon and drops the title — so icon + text are combined by embedding
+  the SF Symbol inline in a single `Text`:
+  - `countdownText != nil` → `Text("\(Image(systemName: "computermouse")) \(countdown)")`
+  - `settings.isEnabled` (no limit) → same form with `On`
   - otherwise → the current plain `Image(systemName: "computermouse")`.
 
 ## Performance
