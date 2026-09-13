@@ -17,9 +17,12 @@ struct MMoveApp: App {
         MenuBarExtra {
             MenuView(settings: settings, engine: engine)
         } label: {
-            if let windowEnd = engine.windowEnd {
+            if let countdown = engine.countdownText {
+                // A static string updated by the engine's own 1s timer —
+                // a live-updating Text(timerInterval:) here sends the
+                // MenuBarExtra into a runaway update loop (100% CPU).
                 Label {
-                    Text(timerInterval: min(Date(), windowEnd)...windowEnd, countsDown: true)
+                    Text(countdown)
                 } icon: {
                     Image(systemName: "computermouse")
                 }

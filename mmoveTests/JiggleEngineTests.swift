@@ -486,4 +486,67 @@ final class JiggleEngineTests: XCTestCase {
         XCTAssertNil(engine.windowEnd)
         engine.stop()
     }
+
+    // MARK: - Countdown text (menu bar label)
+
+    @MainActor
+    func testFormatCountdown() {
+        XCTAssertEqual(JiggleEngine.formatCountdown(-5), "0:00")
+        XCTAssertEqual(JiggleEngine.formatCountdown(0), "0:00")
+        XCTAssertEqual(JiggleEngine.formatCountdown(59.9), "0:59")
+        XCTAssertEqual(JiggleEngine.formatCountdown(60), "1:00")
+        XCTAssertEqual(JiggleEngine.formatCountdown(3599), "59:59")
+        XCTAssertEqual(JiggleEngine.formatCountdown(3600), "1:00:00")
+        XCTAssertEqual(JiggleEngine.formatCountdown(7200), "2:00:00")
+    }
+
+    @MainActor
+    func testCountdownTextSetWhileWindowActive() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        XCTAssertNil(engine.countdownText) // not started yet
+
+        engine.start()
+        XCTAssertEqual(engine.countdownText, "2:00:00")
+
+        engine.stop()
+        XCTAssertNil(engine.countdownText)
+    }
+
+    @MainActor
+    func testCountdownTextNilWithoutLimit() {
+        let store = SettingsStore(defaults: defaults)
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertNil(engine.countdownText)
+        engine.stop()
+    }
+
+    @MainActor
+    func testCountdownTextTicksDown() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 5
+        let engine = JiggleEngine(settings: store)
+        engine.limitInterval = { _ in 30 }
+        engine.start()
+        let first = engine.countdownText
+        XCTAssertEqual(first, "0:30")
+
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 2.2))
+        XCTAssertNotEqual(engine.countdownText, first)
+        engine.stop()
+    }
+
+    @MainActor
+    func testCountdownTextClearedImmediatelyOnExpiry() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertNotNil(engine.countdownText)
+
+        engine.expireWindow()
+        XCTAssertNil(engine.countdownText)
+    }
 }

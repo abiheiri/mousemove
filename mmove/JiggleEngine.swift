@@ -33,6 +33,14 @@ final class JiggleEngine: ObservableObject {
     /// limit). Published so the menu bar label can render a countdown.
     @Published private(set) var windowEnd: Date?
 
+    /// Menu bar countdown text ("9:41" / "1:02:03"), refreshed once per
+    /// second while a runtime window is active; nil otherwise. A plain
+    /// string drives the label: a live-updating Text (timerInterval:) in a
+    /// MenuBarExtra label sends SwiftUI into a runaway update loop that
+    /// pins the CPU at 100%.
+    @Published private(set) var countdownText: String?
+    private var countdownTimer: Timer?
+
     /// When the current window started (nil when stopped or no limit).
     /// Read by MenuView for the "Time left" line.
     private(set) var startedAt: Date?
@@ -78,6 +86,9 @@ final class JiggleEngine: ObservableObject {
         deadlineInterval = 0
         startedAt = nil
         windowEnd = nil
+        countdownTimer?.invalidate()
+        countdownTimer = nil
+        countdownText = nil
         timeLimitReached = false
         currentInterval = 0
         injectionBlocked = false
@@ -128,6 +139,9 @@ final class JiggleEngine: ObservableObject {
         deadlineInterval = 0
         startedAt = nil
         windowEnd = nil
+        countdownTimer?.invalidate()
+        countdownTimer = nil
+        countdownText = nil
         guard settings.isEnabled else {
             currentInterval = 0
             assertion.stop()
@@ -157,6 +171,16 @@ final class JiggleEngine: ObservableObject {
         let deadline = limitInterval(limit)
         deadlineInterval = deadline
         windowEnd = startedAt.addingTimeInterval(deadline)
+        countdownText = Self.formatCountdown(deadline)
+        let countdown = Timer(timeInterval: 1, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, let windowEnd = self.windowEnd else { return }
+                self.countdownText = Self.formatCountdown(windowEnd.timeIntervalSinceNow)
+            }
+        }
+        countdown.tolerance = 0.1
+        RunLoop.main.add(countdown, forMode: .default)
+        countdownTimer = countdown
         let generation = self.generation
         let timer = Timer(timeInterval: deadline, repeats: false) { [weak self] _ in
             Task { @MainActor in
@@ -182,8 +206,23 @@ final class JiggleEngine: ObservableObject {
         deadlineTimer = nil
         deadlineInterval = 0
         windowEnd = nil
+        countdownTimer?.invalidate()
+        countdownTimer = nil
+        countdownText = nil
         timeLimitReached = true
         settings.isEnabled = false
+    }
+
+    /// "9:41" under an hour, "1:02:03" at or above; clamps negative to "0:00".
+    nonisolated static func formatCountdown(_ remaining: TimeInterval) -> String {
+        let total = max(Int(remaining), 0)
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        if hours > 0 {
+            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
+        }
+        return String(format: "%d:%02d", minutes, seconds)
     }
 
     /// Internal (not private) so tests can drive a tick directly.
