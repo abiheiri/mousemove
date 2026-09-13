@@ -457,4 +457,19 @@ final class JiggleEngineTests: XCTestCase {
         engine.stop()
         XCTAssertNil(engine.windowEnd)
     }
+
+    @MainActor
+    func testRemovingLimitMidWindowClearsWindowEnd() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertNotNil(engine.windowEnd)
+
+        store.runtimeLimitMinutes = 0
+        // objectWillChange is observed and rescheduling is deferred one runloop tick.
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertNil(engine.windowEnd)
+        engine.stop()
+    }
 }

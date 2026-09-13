@@ -127,9 +127,9 @@ final class JiggleEngine: ObservableObject {
         deadlineTimer = nil
         deadlineInterval = 0
         startedAt = nil
+        windowEnd = nil
         guard settings.isEnabled else {
             currentInterval = 0
-            windowEnd = nil
             assertion.stop()
             return
         }
