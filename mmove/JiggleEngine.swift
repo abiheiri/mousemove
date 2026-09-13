@@ -152,10 +152,11 @@ final class JiggleEngine: ObservableObject {
     private func armDeadline() {
         let limit = settings.runtimeLimitMinutes
         guard limit > 0 else { return }
-        startedAt = Date()
+        let startedAt = Date()
+        self.startedAt = startedAt
         let deadline = limitInterval(limit)
         deadlineInterval = deadline
-        windowEnd = Date().addingTimeInterval(deadline)
+        windowEnd = startedAt.addingTimeInterval(deadline)
         let generation = self.generation
         let timer = Timer(timeInterval: deadline, repeats: false) { [weak self] _ in
             Task { @MainActor in

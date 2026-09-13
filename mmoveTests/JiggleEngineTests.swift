@@ -434,6 +434,7 @@ final class JiggleEngineTests: XCTestCase {
         // objectWillChange is observed and rescheduling is deferred one runloop tick.
         RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
         XCTAssertNil(engine.windowEnd)
+        engine.stop()
     }
 
     @MainActor
