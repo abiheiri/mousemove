@@ -29,6 +29,10 @@ final class JiggleEngine: ObservableObject {
     /// Cleared on the next resume, which starts a fresh window.
     @Published private(set) var timeLimitReached = false
 
+    /// When the current runtime window expires (nil when stopped or no
+    /// limit). Published so the menu bar label can render a countdown.
+    @Published private(set) var windowEnd: Date?
+
     /// When the current window started (nil when stopped or no limit).
     /// Read by MenuView for the "Time left" line.
     private(set) var startedAt: Date?
@@ -73,6 +77,7 @@ final class JiggleEngine: ObservableObject {
         deadlineTimer = nil
         deadlineInterval = 0
         startedAt = nil
+        windowEnd = nil
         timeLimitReached = false
         currentInterval = 0
         injectionBlocked = false
@@ -124,6 +129,7 @@ final class JiggleEngine: ObservableObject {
         startedAt = nil
         guard settings.isEnabled else {
             currentInterval = 0
+            windowEnd = nil
             assertion.stop()
             return
         }
@@ -149,6 +155,7 @@ final class JiggleEngine: ObservableObject {
         startedAt = Date()
         let deadline = limitInterval(limit)
         deadlineInterval = deadline
+        windowEnd = Date().addingTimeInterval(deadline)
         let generation = self.generation
         let timer = Timer(timeInterval: deadline, repeats: false) { [weak self] _ in
             Task { @MainActor in

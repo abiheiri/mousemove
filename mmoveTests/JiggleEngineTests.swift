@@ -395,4 +395,66 @@ final class JiggleEngineTests: XCTestCase {
         XCTAssertEqual(engine.deadlineInterval, 0)
         XCTAssertFalse(engine.timeLimitReached)
     }
+
+    // MARK: - Window end (menu bar countdown)
+
+    @MainActor
+    func testWindowEndSetWhenStartingWithLimit() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        XCTAssertNil(engine.windowEnd) // not started yet
+
+        let before = Date()
+        engine.start()
+        let end = engine.windowEnd
+        XCTAssertNotNil(end)
+        XCTAssertEqual(end?.timeIntervalSince(before) ?? 0, 7200, accuracy: 5)
+        engine.stop()
+    }
+
+    @MainActor
+    func testWindowEndNilWithoutLimit() {
+        let store = SettingsStore(defaults: defaults)
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertNil(engine.windowEnd)
+        engine.stop()
+    }
+
+    @MainActor
+    func testWindowEndNilAfterManualPause() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        XCTAssertNotNil(engine.windowEnd)
+
+        store.isEnabled = false
+        // objectWillChange is observed and rescheduling is deferred one runloop tick.
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertNil(engine.windowEnd)
+    }
+
+    @MainActor
+    func testWindowEndNilAfterExpiry() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        engine.expireWindow()
+        // isEnabled=false triggers a deferred reschedule one runloop tick later.
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.2))
+        XCTAssertNil(engine.windowEnd)
+    }
+
+    @MainActor
+    func testStopClearsWindowEnd() {
+        let store = SettingsStore(defaults: defaults)
+        store.runtimeLimitMinutes = 120
+        let engine = JiggleEngine(settings: store)
+        engine.start()
+        engine.stop()
+        XCTAssertNil(engine.windowEnd)
+    }
 }
