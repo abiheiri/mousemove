@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.1] - 2026-09-13
+
+### Fixed
+
+- 100% CPU and an unresponsive app while a runtime limit was active: the
+  menu bar countdown used a live-updating SwiftUI Text, which sends
+  MenuBarExtra into a runaway update loop. The countdown is now a plain
+  string refreshed once per second by the engine's own timer.
+
 ## [1.3.0] - 2026-09-13
 
 ### Added

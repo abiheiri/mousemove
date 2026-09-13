@@ -192,7 +192,7 @@ git commit -m "Publish windowEnd from JiggleEngine for menu bar countdown"
 **Files:**
 - Modify: `mmove/mmoveApp.swift`
 
-Context: the label is currently a fixed `Image(systemName: "computermouse")`. `mmoveApp` holds `settings` and `engine` as `@StateObject`, so the label re-renders when `engine.windowEnd` or `settings.isEnabled` changes. `Text(timerInterval:countsDown:)` updates itself once per second — no manual timer needed.
+Context: the label is currently a fixed `Image(systemName: "computermouse")`. `mmoveApp` holds `settings` and `engine` as `@StateObject`, so the label re-renders when `engine.countdownText` or `settings.isEnabled` changes.
 
 - [x] **Step 1: Update the label**
 
@@ -209,16 +209,22 @@ In `mmove/mmoveApp.swift`, replace the whole `body` property:
     }
 ```
 
-with:
+with (as shipped — see the postmortem note below; the live-updating
+`Text(timerInterval:)` originally prescribed here caused a runaway update
+loop and 100% CPU, so the countdown is a static string published by the
+engine's own 1 s timer):
 
 ```swift
     var body: some Scene {
         MenuBarExtra {
             MenuView(settings: settings, engine: engine)
         } label: {
-            if let windowEnd = engine.windowEnd {
+            if let countdown = engine.countdownText {
+                // A static string updated by the engine's own 1s timer —
+                // a live-updating Text(timerInterval:) here sends the
+                // MenuBarExtra into a runaway update loop (100% CPU).
                 Label {
-                    Text(timerInterval: min(Date(), windowEnd)...windowEnd, countsDown: true)
+                    Text(countdown)
                 } icon: {
                     Image(systemName: "computermouse")
                 }
@@ -232,7 +238,16 @@ with:
     }
 ```
 
-Note the `min(Date(), windowEnd)` clamp: the deadline timer's `tolerance` can let `windowEnd` sit in the past for up to 60 s while the engine still runs, and an inverted `ClosedRange` (lowerBound > upperBound) traps at the `...` operator. Clamping the lower bound renders `0:00` during that tail instead of crashing.
+Postmortem (fixed in 1.3.1): the `Text(timerInterval:countsDown:)` version of
+this label sent SwiftUI's `MenuBarExtraHost` into a runaway update loop —
+every update rewrote the status-item image (`NSStatusBarButton.setImage:`,
+full SF Symbol re-resolution) and immediately scheduled the next one, pinning
+the main thread at 100% CPU. `JiggleEngine` therefore owns a 1 s repeating
+`Timer` (armed in `armDeadline()`, cleared wherever `windowEnd` is cleared)
+that publishes a pre-rendered `countdownText: String?`, and the label renders
+that static string. `JiggleEngine.formatCountdown(_:)` renders "M:SS" under
+an hour and "H:MM:SS" at or above, clamping negative values to "0:00" (the
+deadline timer's tolerance can leave the window in the past for up to 60 s).
 
 Behavior this produces:
 - Running with a runtime limit → mouse icon + live countdown to window end.
@@ -258,7 +273,7 @@ Then launch the built app (or run from Xcode) and confirm in the menu bar:
 2. With Run for → No limit and mmove resumed: icon + "On".
 3. After clicking Pause: plain icon only.
 
-If the countdown or "On" text does not appear, check that `engine.windowEnd` is non-nil (limit set and engine enabled) before suspecting the view code.
+If the countdown or "On" text does not appear, check that `engine.countdownText` is non-nil (limit set and engine enabled) before suspecting the view code.
 
 - [x] **Step 4: Commit**
 

@@ -26,31 +26,30 @@ are unchanged.
 
 ### JiggleEngine
 
-- Add `@Published private(set) var windowEnd: Date?`.
-- Set it in `armDeadline()` to `startedAt + deadline` (i.e. the moment the
-  current runtime window expires), reusing the same captured `Date` for both
-  so `windowEnd` and `remainingSeconds` stay consistent.
-- Clear it in `stop()`, at the top of `reschedule()` (covers both the
-  disabled path and removing the limit mid-window), and synchronously in
-  `expireWindow()`.
+- `@Published private(set) var windowEnd: Date?` — when the current runtime
+  window expires; set in `armDeadline()`, cleared in `stop()`, at the top of
+  `reschedule()`, and synchronously in `expireWindow()`. Feeds the countdown.
+- Add `@Published private(set) var countdownText: String?` — the rendered
+  countdown string ("9:41" / "1:02:03"), refreshed once per second by an
+  engine-owned 1 s `Timer` armed in `armDeadline()`. A static string drives
+  the label because a live-updating `Text(timerInterval:)` in a MenuBarExtra
+  label sends SwiftUI into a runaway update loop (100% CPU, unresponsive
+  app — observed on macOS 26).
+- Clear the timer and text everywhere deadline state is cleared: `stop()`,
+  the top of `reschedule()`, and synchronously in `expireWindow()`.
 
 ### mmoveApp
 
 - The `MenuBarExtra` label switches on engine state:
-  - `windowEnd != nil` → `Label` with the `computermouse` SF Symbol and
-    `Text(timerInterval: min(Date(), end)...end, countsDown: true)`. The
-    lower bound is clamped because the deadline timer's tolerance can leave
-    `windowEnd` in the past while the engine still runs, and an inverted
-    `ClosedRange` traps. SwiftUI re-renders the countdown once per second
-    automatically; no manual timer is added.
+  - `countdownText != nil` → `Label` with the `computermouse` SF Symbol and
+    `Text(countdownText)` (static string; updates via the engine's timer).
   - `settings.isEnabled` (no limit) → `Label` with icon and `On`.
   - otherwise → the current plain `Image(systemName: "computermouse")`.
 
 ## Performance
 
-One extra SwiftUI label re-render per second, only while a runtime limit
-is active. Negligible compared to the existing jiggle timer; no new
-`Timer` objects are created.
+One 1 s `Timer` and one label re-render per second, only while a runtime
+limit is active. Negligible compared to the existing jiggle timer.
 
 ## Testing
 
@@ -64,6 +63,10 @@ Extend `JiggleEngineTests`:
   clear, before the deferred reschedule).
 - `windowEnd` is `nil` after `stop()`.
 - `windowEnd` is `nil` after removing the limit mid-window.
+- `formatCountdown` formats "M:SS" under an hour, "H:MM:SS" at/above,
+  clamps negative to "0:00".
+- `countdownText` is set while a window is active, ticks down each second,
+  is `nil` with no limit, and clears on stop and expiry.
 
 ## Out of scope
 
