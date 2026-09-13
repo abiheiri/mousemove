@@ -4,6 +4,14 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [1.3.0] - 2026-09-13
+
+### Added
+
+- Menu bar state indicator: a live countdown to the end of the runtime
+  window when a "Run for" limit is set, "On" next to the icon when running
+  with no limit, and the plain icon when paused.
+
 ## [1.2.0] - 2026-09-11
 
 ### Added
