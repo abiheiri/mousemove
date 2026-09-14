@@ -24,7 +24,16 @@ Click the mouse icon in the menu bar:
   or 8 hours, or a custom number of minutes. mmove pauses itself when the
   window elapses, and a "Time left" line under the status shows the remaining
   time.
+- **Check for Updates…**: compares the running version against the latest
+  GitHub release and offers to open the download page when a newer one
+  exists.
 - **Quit mmove**.
+
+## Requirements
+
+- macOS 13 Ventura or later — supported through macOS 27. The minimum is
+  set by SwiftUI's MenuBarExtra, which powers the entire menu bar UI.
+- Apple Silicon (arm64)
 
 ## Build
 

@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- "Check for Updates…" menu item: checks the latest GitHub release and
+  offers to open the download page when a newer version exists.
+- README documents the supported macOS range: macOS 13 Ventura (the
+  minimum, required by MenuBarExtra) through macOS 27.
+
 ## [1.3.2] - 2026-09-13
 
 ### Fixed
