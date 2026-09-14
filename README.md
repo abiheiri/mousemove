@@ -10,7 +10,9 @@ blocks input injection.
 - Lives only in the menu bar; no Dock icon, no windows.
 - Never interferes while you're typing or using the mouse.
 - Net cursor movement is zero: events are posted at the cursor's current position.
-- No special permissions required.
+- Requires Accessibility permission to post synthetic input events — macOS
+  prompts on first use. Without it, mmove still keeps the display awake via
+  the power assertion and shows a "display-only mode" status.
 
 ![mmove menu](docs/screenshot.png)
 
@@ -19,8 +21,8 @@ blocks input injection.
 Click the mouse icon in the menu bar:
 
 - **Pause / Resume**: toggle the activity timer.
-- **Settings**: choose how often to nudge, every 15s, 30s, 60s (default), 2m, or 5m.
-- **Settings → Run for**: set an optional runtime limit of no limit, 2, 4, 6,
+- **Jiggle every**: choose how often to nudge, every 15s, 30s, 60s (default), 2m, or 5m.
+- **Run for**: set an optional runtime limit of no limit, 2, 4, 6,
   or 8 hours, or a custom number of minutes. mmove pauses itself when the
   window elapses, and a "Time left" line under the status shows the remaining
   time.

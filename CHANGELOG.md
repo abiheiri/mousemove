@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Fixed
+
+- README: corrected the permissions claim — posting synthetic input events
+  requires Accessibility permission, and without it mmove runs in
+  display-only mode.
+- README: Usage now names the actual "Jiggle every" and "Run for" submenus
+  instead of the pre-1.3.2 "Settings" menu.
+
 ## [1.4.0] - 2026-09-14
 
 ### Added
