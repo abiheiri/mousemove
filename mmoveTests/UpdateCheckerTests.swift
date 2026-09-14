@@ -31,4 +31,67 @@ final class UpdateCheckerTests: XCTestCase {
         XCTAssertEqual(UpdateChecker.compare("1.4", "1.4.0"), .orderedSame)
         XCTAssertEqual(UpdateChecker.compare("1.4.1", "1.4"), .orderedDescending)
     }
+
+    // MARK: - Check result mapping
+
+    /// Minimal GitHub /releases/latest response body.
+    private func releaseJSON(tag: String, url: String? = nil) -> Data {
+        let url = url ?? "https://github.com/abiheiri/mousemove/releases/tag/\(tag)"
+        return Data(#"{"tag_name": "\#(tag)", "html_url": "\#(url)"}"#.utf8)
+    }
+
+    func testNewerReleaseYieldsUpdateAvailable() async {
+        var checker = UpdateChecker()
+        checker.currentVersion = "1.3.2"
+        checker.fetchData = { _ in self.releaseJSON(tag: "v1.4.0") }
+        let result = await checker.check()
+        XCTAssertEqual(result, .updateAvailable(UpdateChecker.LatestRelease(
+            version: "1.4.0",
+            url: URL(string: "https://github.com/abiheiri/mousemove/releases/tag/v1.4.0")!
+        )))
+    }
+
+    func testSameReleaseYieldsUpToDate() async {
+        var checker = UpdateChecker()
+        checker.currentVersion = "1.3.2"
+        checker.fetchData = { _ in self.releaseJSON(tag: "v1.3.2") }
+        let result = await checker.check()
+        XCTAssertEqual(result, .upToDate)
+    }
+
+    func testOlderReleaseYieldsUpToDate() async {
+        var checker = UpdateChecker()
+        checker.currentVersion = "1.3.2"
+        checker.fetchData = { _ in self.releaseJSON(tag: "v1.2.0") }
+        let result = await checker.check()
+        XCTAssertEqual(result, .upToDate)
+    }
+
+    func testFetchFailureYieldsFailed() async {
+        var checker = UpdateChecker()
+        checker.currentVersion = "1.3.2"
+        checker.fetchData = { _ in throw URLError(.notConnectedToInternet) }
+        guard case .failed(let reason) = await checker.check() else {
+            return XCTFail("expected .failed")
+        }
+        XCTAssertFalse(reason.isEmpty)
+    }
+
+    func testMalformedJSONYieldsFailed() async {
+        var checker = UpdateChecker()
+        checker.currentVersion = "1.3.2"
+        checker.fetchData = { _ in Data("not json".utf8) }
+        guard case .failed = await checker.check() else {
+            return XCTFail("expected .failed")
+        }
+    }
+
+    func testMissingFieldsYieldFailed() async {
+        var checker = UpdateChecker()
+        checker.currentVersion = "1.3.2"
+        checker.fetchData = { _ in Data(#"{"name": "no tag or url"}"#.utf8) }
+        guard case .failed = await checker.check() else {
+            return XCTFail("expected .failed")
+        }
+    }
 }
