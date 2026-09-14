@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Content of the menu bar extra: status, time-left line, pause/resume,
 /// "Jiggle every" (frequency) and "Run for" (runtime limit) submenus,
-/// version, and quit.
+/// check-for-updates, version, and quit.
 struct MenuView: View {
     @ObservedObject var settings: SettingsStore
     @ObservedObject var engine: JiggleEngine

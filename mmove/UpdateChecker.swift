@@ -27,7 +27,10 @@ struct UpdateChecker {
         request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
         let (data, response) = try await URLSession.shared.data(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
-            throw URLError(.badServerResponse)
+            let code = (response as? HTTPURLResponse)?.statusCode ?? -1
+            throw NSError(domain: "UpdateChecker", code: code, userInfo: [
+                NSLocalizedDescriptionKey: "GitHub returned HTTP \(code)",
+            ])
         }
         return data
     }
