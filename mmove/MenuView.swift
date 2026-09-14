@@ -9,7 +9,7 @@ struct MenuView: View {
 
     /// The running app's marketing version, e.g. "1.0.0".
     static var appVersion: String {
-        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        UpdateChecker.appVersion
     }
 
     var body: some View {
@@ -68,6 +68,10 @@ struct MenuView: View {
             }
         }
 
+        Button("Check for Updates…") {
+            Task { await checkForUpdates() }
+        }
+
         Divider()
 
         Text("mmove \(Self.appVersion)")
@@ -114,6 +118,34 @@ struct MenuView: View {
         guard let minutes = Int(trimmed), SettingsStore.isValidLimit(minutes), minutes > 0 else { return }
         settings.customMinutes = minutes
         settings.runtimeLimitMinutes = minutes
+    }
+
+    /// Manual update check. Results are shown in a modal alert, the same
+    /// pattern as the custom-limit panel, since MenuBarExtra menus can't
+    /// host live UI.
+    @MainActor
+    private func checkForUpdates() async {
+        let result = await UpdateChecker().check()
+        NSApp.activate(ignoringOtherApps: true)
+        let alert = NSAlert()
+        switch result {
+        case .updateAvailable(let release):
+            alert.messageText = "mmove \(release.version) is available"
+            alert.informativeText = "You're running \(Self.appVersion)."
+            alert.addButton(withTitle: "Download")
+            alert.addButton(withTitle: "Later")
+            if alert.runModal() == .alertFirstButtonReturn {
+                NSWorkspace.shared.open(release.url)
+            }
+        case .upToDate:
+            alert.messageText = "You're up to date"
+            alert.informativeText = "mmove \(Self.appVersion) is the latest version."
+            alert.runModal()
+        case .failed(let reason):
+            alert.messageText = "Couldn't check for updates"
+            alert.informativeText = reason
+            alert.runModal()
+        }
     }
 
     /// "2 h 5 min" / "42 min"; rounds up so the line never reads "0 min".
